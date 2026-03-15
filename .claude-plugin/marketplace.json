@@ -1,0 +1,24 @@
+{
+  "name": "vibecoding",
+  "owner": {
+    "name": "JonFermin"
+  },
+  "metadata": {
+    "description": "AI-powered roadmap generation and execution skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "generate-roadmap",
+      "source": "./skills/generate-roadmap",
+      "description": "Generate dependency-aware roadmaps from project documents and specs",
+      "version": "1.0.0"
+    },
+    {
+      "name": "execute-roadmap",
+      "source": "./skills/execute-roadmap",
+      "description": "Execute ROADMAP.md phase-by-phase with sequential or parallel agents",
+      "version": "1.0.0"
+    }
+  ]
+}
