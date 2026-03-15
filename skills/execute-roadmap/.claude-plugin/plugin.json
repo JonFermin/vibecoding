@@ -1,8 +1,0 @@
-{
-  "name": "execute-roadmap",
-  "description": "Execute ROADMAP.md phase-by-phase with sequential or parallel agents",
-  "version": "1.0.0",
-  "author": {
-    "name": "JonFermin"
-  }
-}

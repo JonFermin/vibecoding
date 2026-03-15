@@ -9,15 +9,9 @@
   },
   "plugins": [
     {
-      "name": "generate-roadmap",
-      "source": "./skills/generate-roadmap",
-      "description": "Generate dependency-aware roadmaps from project documents and specs",
-      "version": "1.0.0"
-    },
-    {
-      "name": "execute-roadmap",
-      "source": "./skills/execute-roadmap",
-      "description": "Execute ROADMAP.md phase-by-phase with sequential or parallel agents",
+      "name": "vibecoding",
+      "source": "./plugins/vibecoding",
+      "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
       "version": "1.0.0"
     }
   ]

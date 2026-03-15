@@ -1,8 +1,0 @@
-{
-  "name": "generate-roadmap",
-  "description": "Generate dependency-aware roadmaps from project documents and specs",
-  "version": "1.0.0",
-  "author": {
-    "name": "JonFermin"
-  }
-}
