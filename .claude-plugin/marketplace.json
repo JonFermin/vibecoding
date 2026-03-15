@@ -1,21 +1,22 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "vibecoding",
-  "version": "1.0.0",
-  "description": "AI-powered roadmap generation and execution skills",
   "owner": {
     "name": "JonFermin"
+  },
+  "metadata": {
+    "description": "AI-powered roadmap generation and execution skills",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "vibecoding",
       "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
-      "version": "1.0.0",
-      "author": {
-        "name": "JonFermin"
-      },
-      "source": "./plugins/vibecoding",
-      "category": "development"
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/generate-roadmap",
+        "./skills/execute-roadmap"
+      ]
     }
   ]
 }

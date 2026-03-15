@@ -1,8 +1,0 @@
-{
-  "name": "vibecoding",
-  "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
-  "version": "1.0.0",
-  "author": {
-    "name": "JonFermin"
-  }
-}
