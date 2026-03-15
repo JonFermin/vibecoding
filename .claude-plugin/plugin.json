@@ -1,0 +1,12 @@
+{
+  "name": "roadmap-skills",
+  "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
+  "version": "1.0.0",
+  "author": {
+    "name": "JonFermin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JonFermin/claude-code-marketplace"
+  }
+}
