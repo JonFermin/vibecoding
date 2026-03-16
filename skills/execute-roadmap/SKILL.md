@@ -47,8 +47,8 @@ digraph execute_roadmap {
     "Skip BLOCKED tasks (notify user)" [shape=box];
     "Identify unblocked tasks" -> "Skip BLOCKED tasks (notify user)";
     "Skip BLOCKED tasks (notify user)" -> "Choose dispatch mode";
-    "Choose dispatch mode" -> "Dispatch agents in parallel (worktrees)" [label="parallel: non-overlapping scopes"];
-    "Choose dispatch mode" -> "Is task a SPIKE?" [label="sequential"];
+    "Choose dispatch mode" -> "Dispatch agents in parallel (worktrees)" [label="default: non-overlapping scopes"];
+    "Choose dispatch mode" -> "Is task a SPIKE?" [label="fallback: overlapping scopes or 1 task"];
     "Dispatch agents in parallel (worktrees)" -> "Verify AC + merge to main";
     "Is task a SPIKE?" -> "Dispatch research agent" [label="yes"];
     "Dispatch research agent" -> "Re-scope task from findings";
@@ -130,17 +130,18 @@ Before dispatching, mark the task as `IN PROGRESS` in ROADMAP.md and commit. Thi
 
 **Choose dispatch mode** based on the phase:
 
-#### Sequential Mode (default)
+#### Parallel Mode (default — worktrees)
+Multiple agents run simultaneously in isolated git worktrees. **This is the default when conditions are met.** Use when:
+- Tasks within the phase have **non-overlapping `scope:` values**
+- The phase has 2+ independent tasks
+
+Do NOT ask the user for permission — just dispatch in parallel and inform them: "Dispatching N tasks in parallel (non-overlapping scopes)." If the user has explicitly requested sequential execution, respect that.
+
+#### Sequential Mode (fallback)
 One agent at a time on the working tree. Use when:
 - Tasks have overlapping scopes (even if in the same phase)
-- The phase has 2 or fewer tasks
-- The user prefers sequential execution
-
-#### Parallel Mode (worktrees)
-Multiple agents run simultaneously in isolated git worktrees. Use when:
-- Tasks within the phase have **non-overlapping `scope:` values**
-- The phase has 3+ independent tasks
-- The user opts in (ask on first phase if they want parallel execution)
+- The phase has only 1 task
+- The user has explicitly requested sequential execution
 
 **Parallel workflow:**
 1. For each task, dispatch an agent with `isolation: "worktree"`

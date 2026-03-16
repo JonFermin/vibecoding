@@ -47,7 +47,7 @@ All autonomous decisions are logged to `auto-roadmap.log`. At the end of the run
 |---|---|
 | **BLOCKED tasks** | Skip blocked tasks, log reason to `auto-roadmap.log`. Never wait for resolution. |
 | **SPIKE findings** | Auto-proceed with the research agent's recommended approach. Log the recommendation. |
-| **Parallel mode** | Auto-choose: use parallel if tasks have non-overlapping scopes AND phase has 3+ tasks. Otherwise sequential. Log the choice. |
+| **Parallel mode** | Auto-choose: use parallel if tasks have non-overlapping scopes AND phase has 2+ tasks (default). Otherwise sequential. Log the choice. |
 | **AC failure** | Retry once with failure context. If retry fails, skip the task + log. Increment consecutive failure counter. |
 | **Phase checkpoint** | Auto-continue after integration check passes. If integration fails, attempt fix once, then **halt**. |
 | **Mid-execution re-plan** | Log the discovery, continue as-is. Flag for morning review in summary. |
@@ -176,18 +176,18 @@ Before dispatching, mark the task as `IN PROGRESS` in ROADMAP.md and commit. Thi
 
 **Auto-choose dispatch mode:**
 
-- **Parallel mode:** If the phase has 3+ unblocked tasks AND their `scope:` values do not overlap → use parallel with worktrees. Log: `[DECISION] Parallel mode chosen for Phase N: {count} tasks with non-overlapping scopes`
-- **Sequential mode:** Otherwise → use sequential. Log: `[DECISION] Sequential mode for Phase N: {reason}`
+- **Parallel mode (default):** If the phase has 2+ unblocked tasks AND their `scope:` values do not overlap → use parallel with worktrees. Log: `[DECISION] Parallel mode chosen for Phase N: {count} tasks with non-overlapping scopes`
+- **Sequential mode (fallback):** Otherwise → use sequential. Log: `[DECISION] Sequential mode for Phase N: {reason}`
 
-#### Sequential Mode
-One agent at a time on the working tree. Used when:
-- Tasks have overlapping scopes
-- The phase has 2 or fewer tasks
-
-#### Parallel Mode (worktrees)
+#### Parallel Mode (default — worktrees)
 Multiple agents run simultaneously in isolated git worktrees. Used when:
 - Tasks within the phase have **non-overlapping `scope:` values**
-- The phase has 3+ independent tasks
+- The phase has 2+ independent tasks
+
+#### Sequential Mode (fallback)
+One agent at a time on the working tree. Used when:
+- Tasks have overlapping scopes
+- The phase has only 1 task
 
 **Parallel workflow:**
 1. For each task, dispatch an agent with `isolation: "worktree"`
