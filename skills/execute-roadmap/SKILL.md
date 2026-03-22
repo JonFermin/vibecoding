@@ -148,7 +148,7 @@ One agent at a time on the working tree. Use when:
 2. Each agent works in its own copy of the repo — no conflicts possible
 3. As each agent completes, **merge its worktree branch into main immediately** in completion order: `git merge <worktree-branch> --no-ff -m "roadmap #N: <description>"`. Do not wait for all agents to finish — merge as they arrive. Completion order is safe because scopes don't overlap.
 4. If a merge conflict occurs (shouldn't with non-overlapping scopes, but possible): resolve it or fall back to sequential for the conflicting task
-5. After merging, the worktree is cleaned up automatically
+5. After merging, **explicitly call `ExitWorktree`** to clean up the worktree directory and branch. Do not rely on automatic cleanup — always call `ExitWorktree` after the merge completes (or if the agent fails and the worktree is no longer needed).
 
 **Agent prompt template:**
 
@@ -235,7 +235,7 @@ preserved if the session is interrupted.
 After each agent completes:
 
 1. **Verify AC explicitly** — run each command listed in the task's AC and check the output. If an AC check fails, re-run once to rule out flakiness before flagging as a failure.
-2. If AC passes, merge directly into main (for worktree agents: `git merge <worktree-branch> --no-ff`; for sequential agents: work is already on main).
+2. If AC passes, merge directly into main (for worktree agents: `git merge <worktree-branch> --no-ff`, then call `ExitWorktree` to clean up; for sequential agents: work is already on main).
 3. **Report progress:** "Task #N done (3/5 in Phase 2). Overall: 12/30 tasks complete."
 
 ### Step 6 — Handle Failures
@@ -384,6 +384,7 @@ Summary of completed work (X/X tasks)
 - **Skipping SPIKE research:** If a task is flagged `[SPIKE]`, don't jump straight to implementation. Run the research agent first.
 - **Parallel dispatch with overlapping scopes:** Never dispatch tasks in parallel if their `scope:` values overlap — this causes merge conflicts. Fall back to sequential.
 - **Forgetting to merge worktrees:** After parallel agents complete, merge each worktree branch into main as it completes. Don't leave orphaned worktree branches.
+- **Forgetting to call ExitWorktree:** After merging a worktree branch (or after a failed agent), always call `ExitWorktree` to remove the worktree directory and its branch. Skipping this leaves stale worktrees on disk.
 - **Losing architectural context in collapsed summaries:** When collapsing a phase, include key decisions and patterns — not just "what was built." Later agents depend on this context.
 - **Retrying endlessly:** Max 2 retries per task. After that, the task is blocked and needs human intervention.
 - **Hardcoding build commands:** Always use the commands from the `## Tech Stack` section in ROADMAP.md. Don't guess or hardcode tool-specific commands.
