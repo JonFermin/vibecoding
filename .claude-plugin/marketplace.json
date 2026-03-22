@@ -16,7 +16,8 @@
       "skills": [
         "./skills/generate-roadmap",
         "./skills/execute-roadmap",
-        "./skills/auto-execute-roadmap"
+        "./skills/auto-execute-roadmap",
+        "./skills/archive-roadmap"
       ]
     }
   ]
