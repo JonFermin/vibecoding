@@ -1,0 +1,40 @@
+{
+  "rules_dir": ".claude/rules",
+  "hash_file": ".claude/.doc-refactor-hash",
+  "h2_to_rules": [
+    {
+      "pattern": "^Common Tech Patterns$",
+      "filename": "tech-patterns.md"
+    },
+    {
+      "pattern": "^Platform Notes$",
+      "filename": "platform-notes.md"
+    },
+    {
+      "pattern": "^(Coding Standards|Code Style|Conventions)$",
+      "filename": "coding-standards.md"
+    },
+    {
+      "pattern": "^(Testing|Test).*$",
+      "filename": "testing.md"
+    },
+    {
+      "pattern": "^(Build|Deploy|CI).*$",
+      "filename": "build-deploy.md"
+    },
+    {
+      "pattern": "^(Architecture|Design).*$",
+      "filename": "architecture.md"
+    }
+  ],
+  "sync_targets": [
+    {
+      "tag": "project-table",
+      "file": "README.md"
+    },
+    {
+      "tag": "contributing-standards",
+      "file": "CONTRIBUTING.md"
+    }
+  ]
+}

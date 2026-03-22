@@ -1,0 +1,15 @@
+{
+  "description": "Vibecoding plugin hooks",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/doc-refactor/doc-refactor.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
