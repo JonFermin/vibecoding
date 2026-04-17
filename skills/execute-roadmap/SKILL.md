@@ -190,7 +190,7 @@ If an agent fails or AC verification fails:
 1. Present the failure to the user with context
 2. Ask: **retry**, **skip** (defer task), or **intervene manually**?
 3. If retry: re-dispatch with additional context about what went wrong. **Max 2 retries per task.** After 2 failed retries, the task is considered blocked — present the failure details and ask the user to either intervene manually or skip.
-4. If skip: mark task as `TODO` still, add a note explaining the failure, continue to next task
+4. If skip or blocked: mark task as `TODO` still, add a note explaining the failure, continue to next task. **If the failed agent ran in a worktree, call `ExitWorktree` to remove it** — do not leave the worktree on disk. Exception: if the user chooses **intervene manually** and needs to inspect the agent's partial changes, keep the worktree and tell the user its path.
 
 **Rollback:** If a phase cannot be completed and the user wants to undo:
 - Offer to: (a) revert all commits from this phase, (b) keep successful tasks and retry failed ones, or (c) re-plan remaining tasks by invoking `generate-roadmap` on the unfinished portion.

@@ -244,6 +244,7 @@ If an agent fails or AC verification fails:
    - If retry fails:
      - Log: `[SKIP] Task #N — retry failed, skipping`
      - Mark task as `TODO` with a note: `[FAILED: {reason}]`
+     - **If the agent ran in a worktree, call `ExitWorktree` to clean it up** — unattended runs must not leave stale worktrees on disk for morning review.
      - Increment consecutive failure counter again.
      - **Check halt condition again** after the retry failure.
      - Continue to next task.
