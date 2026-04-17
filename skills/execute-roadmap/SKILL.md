@@ -9,6 +9,29 @@ description: Use when the user asks to execute, build, or start working through 
 
 Reads a `ROADMAP.md` (produced by `generate-roadmap`), then builds the project phase-by-phase directly on main. Independent tasks within a phase can run in parallel using git worktrees (merged into main on completion), or sequentially on the working tree. Completed phases are collapsed to save context.
 
+## Reusable Agents
+
+This skill dispatches the following named agents (defined in `agents/`). Address them with `@<name>` rather than inlining ad-hoc Task prompts — the agent files own the prompt contract, and using named agents keeps dispatch consistent across runs and between `execute-roadmap` and `auto-execute-roadmap`.
+
+- `@phase-executor` — implements a single task in the current phase. One per task in parallel mode.
+- `@spike-researcher` — read-only investigation for `[SPIKE]` tasks; returns refined scope and approach.
+- `@ac-verifier` — runs the Tech Stack Build/Test/Lint (and optional Dev) commands and reports pass/fail. Use for both per-task AC checks and per-phase integration checks when the main session would otherwise burn tool calls running commands itself.
+- `@phase-reviewer` — diff-based quality review of a completed phase, invoked between integration check and user checkpoint when `runPhaseReviewer` is enabled.
+
+All four agents live in `${CLAUDE_PLUGIN_ROOT}/agents/`. See those files for the exact input contract each one expects.
+
+## Plugin Options (read at runtime)
+
+Users configure this plugin via `plugin.json` `userConfig`. Claude Code exports chosen values as env vars to this skill's subprocesses:
+
+- `CLAUDE_PLUGIN_OPTION_PARALLELAGENTLIMIT` (number, default `4`) — cap on concurrent `@phase-executor` agents per phase.
+- `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (string, default `medium`) — effort level passed to dispatched agents. `xhigh` requires Opus 4.7.
+- `CLAUDE_PLUGIN_OPTION_WORKTREEPARENTDIR` (string, default `..`) — parent directory for parallel worktrees.
+- `CLAUDE_PLUGIN_OPTION_AUTOCOMMITONACPASS` (boolean, default `true`) — whether the executor auto-commits after AC passes.
+- `CLAUDE_PLUGIN_OPTION_RUNPHASEREVIEWER` (boolean, default `true`) — whether to dispatch `@phase-reviewer` between integration check and user checkpoint.
+
+Respect these values when choosing parallelism, effort, and post-phase actions. If env vars are not set, fall back to the documented defaults.
+
 ## When to Use
 
 - User says "execute the roadmap", "start building", "work through the phases"
@@ -100,29 +123,10 @@ Order unblocked tasks within the phase: P0 first, then P1, then P2.
 
 If a task has the `[SPIKE]` flag:
 
-1. Dispatch a **research-only** agent with a focused scope:
-   ```
-   Agent(
-     prompt: """
-       Research task #{id}: {description}
-
-       Scope: {scope}
-
-       Investigate the approach. Read relevant code and docs within the scope.
-       Keep your research focused — read at most 10-15 files. Do NOT implement anything.
-
-       Return a concise summary (under 500 words):
-       1. Recommended approach
-       2. Key decisions or tradeoffs
-       3. Refined scope and size estimate
-       4. Any risks or unknowns
-     """
-   )
-   ```
-
-2. Present findings to the user
-3. Update the task description and AC in ROADMAP.md based on findings
-4. Remove the `[SPIKE]` flag and proceed to dispatch the implementation agent
+1. Dispatch the `@spike-researcher` agent with the task id, description, scope, and any specific open questions that need to be resolved before implementation. The agent file (`agents/spike-researcher.md`) defines the full input contract and output format — don't duplicate those instructions inline.
+2. Present the agent's findings to the user.
+3. Update the task description, AC, and size in ROADMAP.md based on the findings.
+4. Remove the `[SPIKE]` flag and proceed to dispatch the implementation agent.
 
 ### Step 4 — Mark In Progress and Dispatch Agent
 
@@ -144,85 +148,27 @@ One agent at a time on the working tree. Use when:
 - The user has explicitly requested sequential execution
 
 **Parallel workflow:**
-1. For each task, dispatch an agent with `isolation: "worktree"`
-2. Each agent works in its own copy of the repo — no conflicts possible
+1. For each task, dispatch the `@phase-executor` agent with `isolation: "worktree"`. Cap concurrent agents at `CLAUDE_PLUGIN_OPTION_PARALLELAGENTLIMIT` (default 4) — queue any remaining tasks and dispatch them as earlier ones merge.
+2. Each agent works in its own copy of the repo — no conflicts possible.
 3. As each agent completes, **merge its worktree branch into main immediately** in completion order: `git merge <worktree-branch> --no-ff -m "roadmap #N: <description>"`. Do not wait for all agents to finish — merge as they arrive. Completion order is safe because scopes don't overlap.
-4. If a merge conflict occurs (shouldn't with non-overlapping scopes, but possible): resolve it or fall back to sequential for the conflicting task
+4. If a merge conflict occurs (shouldn't with non-overlapping scopes, but possible): resolve it or fall back to sequential for the conflicting task.
 5. After merging, **explicitly call `ExitWorktree`** to clean up the worktree directory and branch. Do not rely on automatic cleanup — always call `ExitWorktree` after the merge completes (or if the agent fails and the worktree is no longer needed).
 
-**Agent prompt template:**
+**`@phase-executor` input contract:**
 
-```
-Agent(
-  prompt: """
-    You are implementing task #{id}: {description}
+Pass these inputs when dispatching (the agent file `agents/phase-executor.md` documents the full contract):
 
-    Acceptance criteria:
-    - {AC line from roadmap}
+- **Task**: `#{id}: {description}`
+- **Acceptance criteria**: `{AC line from roadmap}`
+- **Scope**: `{scope from roadmap}`
+- **Tech Stack commands**: Build / Test / Lint (and Dev if present) — verbatim from the `## Tech Stack` section of ROADMAP.md.
+- **Project conventions**: key points from CLAUDE.md (tech stack, naming, patterns).
+- **Completed dependencies**: `depends:` task ids + one-line description of what each produced.
+- **Phase context**: collapsed summaries of prior completed phases (Built / Patterns / Key files).
+- **Task type hint**: `infra` | `ui` | `api` | `test` | omit for general. The executor applies type-specific verification steps.
+- **Effort**: set to `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (default `medium`, or `xhigh` on Opus 4.7 for large/risky tasks).
 
-    Relevant files/directories: {scope from roadmap}
-
-    Tech Stack commands (from ROADMAP.md):
-    - Build: {build command}
-    - Test: {test command}
-    - Lint: {lint command}
-
-    Project conventions:
-    - {key conventions from CLAUDE.md — tech stack, naming, patterns}
-
-    Project context:
-    - {relevant architecture/design doc excerpts}
-    - {what has been built so far — collapsed phase summaries}
-
-    Dependencies already completed:
-    - {list of completed dependency tasks and brief description of what they produced}
-
-    {task_type_instructions}
-
-    Instructions:
-    1. Start by reading files in {scope} to understand existing code
-    2. Plan your approach — identify what needs to change
-    3. Implement step by step
-    4. Verify your work against the acceptance criteria using the Tech Stack commands above
-    5. Commit with message: `roadmap #{id}: {short description}`
-
-    IMPORTANT: Do NOT use the Skill tool — it is not available to you.
-    Inline all instructions you need here.
-  """
-)
-```
-
-**Task-type instructions** — insert the appropriate block into `{task_type_instructions}` based on the task:
-
-- **Infra/setup tasks** (CI, build config, tooling):
-  ```
-  This is an infrastructure task. Verify the tool/service is installed and working.
-  Test the setup with a minimal example before marking complete.
-  ```
-- **UI/frontend tasks** (components, views, styling):
-  ```
-  This is a UI task. After implementation, verify the component renders without
-  errors in the dev server. Check for console warnings and visual correctness.
-  ```
-- **API/backend tasks** (endpoints, services, data layer):
-  ```
-  This is a backend task. Verify endpoints respond correctly with sample requests.
-  Check error cases return appropriate status codes.
-  ```
-- **Test-only tasks** (adding tests for existing code):
-  ```
-  This is a testing task. Do NOT modify source code — only add or modify test files.
-  Ensure all new tests pass and existing tests are not broken.
-  ```
-- **General tasks** (default): omit the block entirely.
-
-**Large task checkpoints:** For tasks sized `[L]`, add to the agent prompt:
-```
-This is a large task. Commit intermediate progress at natural breakpoints
-(e.g., after completing a sub-component or major function). Use commit messages
-like: `roadmap #{id} (wip): {what was completed}`. This ensures progress is
-preserved if the session is interrupted.
-```
+For tasks sized `[L]`, also instruct the executor to commit intermediate progress with messages like `roadmap #{id} (wip): {what was completed}`. This preserves progress if the session is interrupted.
 
 **Dispatch rules:**
 - Prioritize P0 tasks first within each phase
@@ -234,8 +180,8 @@ preserved if the session is interrupted.
 
 After each agent completes:
 
-1. **Verify AC explicitly** — run each command listed in the task's AC and check the output. If an AC check fails, re-run once to rule out flakiness before flagging as a failure.
-2. If AC passes, merge directly into main (for worktree agents: `git merge <worktree-branch> --no-ff`, then call `ExitWorktree` to clean up; for sequential agents: work is already on main).
+1. **Verify AC explicitly** — run each command listed in the task's AC and check the output. You may either run the commands directly from the main session or delegate to the `@ac-verifier` agent (recommended for phases where multiple tasks complete in quick succession — the verifier returns a compact pass/fail report per command, saving tool calls in the main session). If an AC check fails, re-run once to rule out flakiness before flagging as a failure.
+2. If AC passes, merge directly into main (for worktree agents: `git merge <worktree-branch> --no-ff`, then call `ExitWorktree` to clean up; for sequential agents: work is already on main). If `CLAUDE_PLUGIN_OPTION_AUTOCOMMITONACPASS` is `false`, leave the executor's staged changes in place for user review instead of merging automatically.
 3. **Report progress:** "Task #N done (3/5 in Phase 2). Overall: 12/30 tasks complete."
 
 ### Step 6 — Handle Failures
@@ -281,18 +227,15 @@ After each task completes successfully:
 
 After all tasks in a phase are complete:
 
-1. **Integration check:** Run the commands from the `## Tech Stack` section of ROADMAP.md:
-   - Run the **Build** command — must exit 0
-   - Run the **Test** command — all tests must pass
-   - Run the **Lint** command if present — no new warnings
-   - If a **Dev** command is listed: start it in the background, wait 5 seconds, check if the process is still running and stderr contains no fatal errors, then kill it. If it crashed or produced errors, treat as integration failure.
-   - If integration fails: diagnose the issue, fix it, and commit before proceeding
+1. **Integration check:** Dispatch the `@ac-verifier` agent with `check type: phase-integration`, passing the Tech Stack commands. The agent runs Build / Test / Lint / Dev and returns a compact per-command pass/fail report. (Alternatively, run the commands directly from the main session if you prefer a tighter loop.) If integration fails: diagnose the issue, fix it, and commit before proceeding.
 
-2. **User checkpoint:** Pause and ask the user:
+2. **Phase review** (optional, default on): If `CLAUDE_PLUGIN_OPTION_RUNPHASEREVIEWER` is `true`, dispatch the `@phase-reviewer` agent with the phase number, the list of task ids completed in this phase, and the diff range (e.g., `HEAD~N..HEAD` covering the phase's commits). Surface any `needs rework` findings to the user in the checkpoint below. Skip this step for small or exploratory phases if the user has disabled it.
+
+3. **User checkpoint:** Pause and ask the user:
    - "Phase N complete (overall: X/Y tasks done). Want to review, test manually, adjust the plan, or continue to Phase N+1?"
    - If milestone phase: emphasize that this is a good point to demo/test
 
-3. Proceed to next phase only after user confirms.
+4. Proceed to next phase only after user confirms.
 
 ### Step 9 — Next Phase
 

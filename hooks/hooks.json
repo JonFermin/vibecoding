@@ -10,6 +10,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/claudemd-sync/claudemd-sync.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

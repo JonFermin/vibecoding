@@ -9,6 +9,14 @@ description: Use when the user asks to create a roadmap, break down a project in
 
 Reads project documents and conventions, asks high-level clarifying questions, then produces a `ROADMAP.md` with dependency-aware phases. Designed to be consumed by the `execute-roadmap` skill.
 
+## Model Capability Guidance
+
+Dependency-DAG construction is the single highest-leverage step in this skill — a wrong topological order wastes later execution time fixing cascading failures. Spend model capability here:
+
+- **Effort level:** On Opus 4.7 or later, use `xhigh` effort for Step 4 (Build Phases). On earlier Opus or Sonnet, `high` effort is appropriate. Default `medium` is acceptable only for trivial roadmaps (≤ 5 tasks).
+- **Extended thinking:** Before constructing the DAG, think deeply about task ordering, cross-cutting dependencies, and hidden coupling (shared files, shared state, shared build steps). Surface any assumptions explicitly in the clarifying questions before committing to a phase layout.
+- **1M context (Opus 4.7):** You have room to load the **entire** design doc, every referenced architecture/RFC doc, workspace-level CLAUDE.md, project-level CLAUDE.md, and any existing code directories relevant to already-built features — all in one pass. Do this upfront rather than chunking with `@file` references; holistic reading catches dependencies that narrow passes miss. The practical ceiling is ~500k input tokens before inference slowdown, so still skip vendored dependencies, lockfiles, and binary assets.
+
 ## When to Use
 
 - User asks to generate a roadmap or project plan
@@ -48,12 +56,15 @@ Before generating anything, check if `ROADMAP.md` already exists at the project 
 - If extending or merging, read the existing roadmap first. Preserve all `DONE` phases as collapsed summaries. Reuse existing task IDs and continue numbering from the highest existing ID.
 - If overwriting, proceed normally but warn the user that the old roadmap will be replaced.
 
-### Step 1 — Read Project Conventions
+### Step 1 — Read Project Conventions and All Referenced Docs
 
-Before anything else:
-- Read `CLAUDE.md` if it exists — extract tech stack, coding standards, naming conventions, preferred libraries
-- Check for existing config files (`package.json`, `Cargo.toml`, `pyproject.toml`, etc.) to detect tech stack
-- Note any conventions that agents must follow during execution
+Read everything upfront rather than chunking — the model capability guidance section above explains why. Specifically:
+
+- Read workspace-level `CLAUDE.md` (e.g., `~/DEVELOP/CLAUDE.md`) if present — extracts user-level conventions and project inventory.
+- Read project-level `CLAUDE.md` — tech stack, coding standards, naming conventions, preferred libraries.
+- Read **all** design docs, architecture docs, RFCs, and specs the user referenced, in full.
+- Check for existing config files (`package.json`, `Cargo.toml`, `pyproject.toml`, `project.godot`, `tauri.conf.json`, etc.) to detect tech stack.
+- Note any conventions that agents must follow during execution.
 
 ### Step 2 — Document Analysis
 
@@ -80,6 +91,8 @@ Ask 3-5 questions. **Batch the first 3 together**, then follow up only if needed
 6. "Should tests be part of each task's acceptance criteria, or do you want separate testing tasks?"
 
 ### Step 4 — Build Phases and Generate
+
+Before building the DAG, **think deeply** about task ordering, hidden coupling, and cross-cutting dependencies (shared files, shared migrations, shared type definitions, shared build steps). This is the step where `xhigh` effort on Opus 4.7 pays off — a clean DAG saves hours of cascading fixes during execution.
 
 1. Build a dependency DAG from the extracted tasks
 2. **Prioritize the path to MVP:** Identify the shortest chain of tasks that produces a working end-to-end flow. These tasks are P0 and land in the earliest phases. Everything else supports or extends that path.

@@ -35,6 +35,25 @@ Reads a `ROADMAP.md` (produced by `generate-roadmap`), then builds the project p
 
 All autonomous decisions are logged to `auto-roadmap.log`. At the end of the run (or on halt), a `auto-roadmap-summary.md` is written for morning review.
 
+## Reusable Agents
+
+Dispatch the same named agents as `execute-roadmap` (defined in `${CLAUDE_PLUGIN_ROOT}/agents/`):
+
+- `@phase-executor` — implements a single task (one per task in parallel mode).
+- `@spike-researcher` — investigates `[SPIKE]` tasks and returns a refined scope. Auto-proceed with its recommendation.
+- `@ac-verifier` — runs Build/Test/Lint (and optional Dev) and returns per-command pass/fail. Use for per-task AC and phase integration checks — this keeps the main session's tool count low across a long overnight run.
+- `@phase-reviewer` — diff-based quality review between integration check and next phase (only if `runPhaseReviewer` is enabled; findings are logged but do not halt execution).
+
+## Plugin Options (read at runtime)
+
+Honor these env vars (set by Claude Code from `plugin.json` `userConfig`), falling back to defaults if unset:
+
+- `CLAUDE_PLUGIN_OPTION_PARALLELAGENTLIMIT` (default `4`) — cap on concurrent phase-executors.
+- `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (default `medium`) — effort passed to dispatched agents. `xhigh` requires Opus 4.7.
+- `CLAUDE_PLUGIN_OPTION_WORKTREEPARENTDIR` (default `..`) — parent directory for worktrees.
+- `CLAUDE_PLUGIN_OPTION_AUTOCOMMITONACPASS` (default `true`) — when `false`, leaves staged changes for morning review instead of auto-committing.
+- `CLAUDE_PLUGIN_OPTION_RUNPHASEREVIEWER` (default `true`) — whether to dispatch `@phase-reviewer` after each phase's integration check.
+
 ## When to Use
 
 - User says "run the roadmap overnight", "headless execution", "auto-execute"
@@ -145,29 +164,10 @@ Order unblocked tasks within the phase: P0 first, then P1, then P2.
 
 If a task has the `[SPIKE]` flag:
 
-1. Dispatch a **research-only** agent with a focused scope:
-   ```
-   Agent(
-     prompt: """
-       Research task #{id}: {description}
-
-       Scope: {scope}
-
-       Investigate the approach. Read relevant code and docs within the scope.
-       Keep your research focused — read at most 10-15 files. Do NOT implement anything.
-
-       Return a concise summary (under 500 words):
-       1. Recommended approach
-       2. Key decisions or tradeoffs
-       3. Refined scope and size estimate
-       4. Any risks or unknowns
-     """
-   )
-   ```
-
-2. **Auto-proceed:** Accept the research agent's recommended approach without review.
+1. Dispatch the `@spike-researcher` agent with the task id, description, scope, and any open questions from the task. The agent file (`agents/spike-researcher.md`) defines the full contract.
+2. **Auto-proceed:** Accept the agent's recommended approach without review.
 3. Log: `[DECISION] SPIKE #N — auto-accepted recommendation: {one-line summary}`
-4. Update the task description and AC in ROADMAP.md based on findings.
+4. Update the task description, AC, and size in ROADMAP.md based on findings.
 5. Remove the `[SPIKE]` flag and proceed to dispatch the implementation agent.
 
 ## Step 4 — Mark In Progress and Dispatch Agent
@@ -190,85 +190,27 @@ One agent at a time on the working tree. Used when:
 - The phase has only 1 task
 
 **Parallel workflow:**
-1. For each task, dispatch an agent with `isolation: "worktree"`
-2. Each agent works in its own copy of the repo — no conflicts possible
+1. For each task, dispatch the `@phase-executor` agent with `isolation: "worktree"`. Cap concurrent agents at `CLAUDE_PLUGIN_OPTION_PARALLELAGENTLIMIT` (default 4) — queue any remaining tasks and dispatch them as earlier ones merge.
+2. Each agent works in its own copy of the repo — no conflicts possible.
 3. As each agent completes, **merge its worktree branch into main immediately** in completion order: `git merge <worktree-branch> --no-ff -m "roadmap #N: <description>"`. Do not wait for all agents to finish — merge as they arrive.
 4. If a merge conflict occurs: resolve it or fall back to sequential for the conflicting task.
 5. After merging, **explicitly call `ExitWorktree`** to clean up the worktree directory and branch. Do not rely on automatic cleanup — always call `ExitWorktree` after the merge completes (or if the agent fails and the worktree is no longer needed).
 
-**Agent prompt template:**
+**`@phase-executor` input contract:**
 
-```
-Agent(
-  prompt: """
-    You are implementing task #{id}: {description}
+Pass these inputs when dispatching (full contract in `agents/phase-executor.md`):
 
-    Acceptance criteria:
-    - {AC line from roadmap}
+- **Task**: `#{id}: {description}`
+- **Acceptance criteria**: `{AC line from roadmap}`
+- **Scope**: `{scope from roadmap}`
+- **Tech Stack commands**: Build / Test / Lint (and Dev if present) — verbatim from `## Tech Stack` in ROADMAP.md.
+- **Project conventions**: key points from CLAUDE.md.
+- **Completed dependencies**: `depends:` ids + one-line description of what each produced.
+- **Phase context**: collapsed summaries of prior completed phases.
+- **Task type hint**: `infra` | `ui` | `api` | `test` | omit for general.
+- **Effort**: set to `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (default `medium`; `xhigh` on Opus 4.7 for large/risky tasks).
 
-    Relevant files/directories: {scope from roadmap}
-
-    Tech Stack commands (from ROADMAP.md):
-    - Build: {build command}
-    - Test: {test command}
-    - Lint: {lint command}
-
-    Project conventions:
-    - {key conventions from CLAUDE.md — tech stack, naming, patterns}
-
-    Project context:
-    - {relevant architecture/design doc excerpts}
-    - {what has been built so far — collapsed phase summaries}
-
-    Dependencies already completed:
-    - {list of completed dependency tasks and brief description of what they produced}
-
-    {task_type_instructions}
-
-    Instructions:
-    1. Start by reading files in {scope} to understand existing code
-    2. Plan your approach — identify what needs to change
-    3. Implement step by step
-    4. Verify your work against the acceptance criteria using the Tech Stack commands above
-    5. Commit with message: `roadmap #{id}: {short description}`
-
-    IMPORTANT: Do NOT use the Skill tool — it is not available to you.
-    Inline all instructions you need here.
-  """
-)
-```
-
-**Task-type instructions** — insert the appropriate block into `{task_type_instructions}` based on the task:
-
-- **Infra/setup tasks** (CI, build config, tooling):
-  ```
-  This is an infrastructure task. Verify the tool/service is installed and working.
-  Test the setup with a minimal example before marking complete.
-  ```
-- **UI/frontend tasks** (components, views, styling):
-  ```
-  This is a UI task. After implementation, verify the component renders without
-  errors in the dev server. Check for console warnings and visual correctness.
-  ```
-- **API/backend tasks** (endpoints, services, data layer):
-  ```
-  This is a backend task. Verify endpoints respond correctly with sample requests.
-  Check error cases return appropriate status codes.
-  ```
-- **Test-only tasks** (adding tests for existing code):
-  ```
-  This is a testing task. Do NOT modify source code — only add or modify test files.
-  Ensure all new tests pass and existing tests are not broken.
-  ```
-- **General tasks** (default): omit the block entirely.
-
-**Large task checkpoints:** For tasks sized `[L]`, add to the agent prompt:
-```
-This is a large task. Commit intermediate progress at natural breakpoints
-(e.g., after completing a sub-component or major function). Use commit messages
-like: `roadmap #{id} (wip): {what was completed}`. This ensures progress is
-preserved if the session is interrupted.
-```
+For tasks sized `[L]`, also instruct the executor to commit intermediate progress with messages like `roadmap #{id} (wip): {what was completed}` so overnight session interruptions don't lose work.
 
 **Dispatch rules:**
 - Prioritize P0 tasks first within each phase
@@ -280,9 +222,9 @@ preserved if the session is interrupted.
 
 After each agent completes:
 
-1. **Verify AC explicitly** — run each command listed in the task's AC and check the output.
+1. **Verify AC explicitly** — dispatch the `@ac-verifier` agent with `check type: task-ac`, passing the AC line and Tech Stack commands. The agent returns per-command pass/fail. (You may run commands directly from the main session for simple single-command ACs; delegating to the verifier saves tool calls across a long run.)
 2. If AC passes:
-   - Merge into main (for worktree agents: `git merge <worktree-branch> --no-ff`, then call `ExitWorktree` to clean up; for sequential agents: work is already on main).
+   - Merge into main (for worktree agents: `git merge <worktree-branch> --no-ff`, then call `ExitWorktree` to clean up; for sequential agents: work is already on main). If `CLAUDE_PLUGIN_OPTION_AUTOCOMMITONACPASS` is `false`, leave staged changes for morning review instead.
    - Mark task as `DONE` in ROADMAP.md.
    - **Reset consecutive failure counter to 0.**
    - Log: `[INFO] Task #N DONE ({completed}/{total} in Phase {P})`
@@ -334,14 +276,11 @@ After each task completes successfully:
 
 After all dispatchable tasks in a phase are complete:
 
-1. **Integration check:** Run the commands from the `## Tech Stack` section of ROADMAP.md:
-   - Run the **Build** command — must exit 0
-   - Run the **Test** command — all tests must pass
-   - Run the **Lint** command if present — no new warnings
-   - If a **Dev** command is listed: start it in the background, wait 5 seconds, check if the process is still running and stderr contains no fatal errors, then kill it.
+1. **Integration check:** Dispatch the `@ac-verifier` agent with `check type: phase-integration`, passing the Tech Stack commands. It runs Build / Test / Lint / Dev and returns a compact per-command pass/fail report.
 
 2. **If integration passes:**
    - Log: `[INFO] Phase {N} integration check passed`
+   - **Phase review** (optional): If `CLAUDE_PLUGIN_OPTION_RUNPHASEREVIEWER` is `true`, dispatch `@phase-reviewer` with the phase number, completed task ids, and diff range. Log any `needs rework` findings — do NOT halt for them; they are surfaced in the morning summary.
    - **Push to remote:** `git push origin main`
    - Log: `[PUSH] Phase {N} complete — pushed to origin/main`
    - Auto-continue to next phase — no pause.

@@ -1,0 +1,7 @@
+{
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "${CLAUDE_PLUGIN_ROOT}/statusline/roadmap-status.sh",
+    "refreshInterval": 10
+  }
+}

@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "AI-powered roadmap generation and execution skills",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -18,7 +18,8 @@
         "./skills/execute-roadmap",
         "./skills/auto-execute-roadmap",
         "./skills/archive-roadmap",
-        "./skills/doc-refactor-hook"
+        "./skills/doc-refactor-hook",
+        "./skills/analyze-sessions"
       ]
     }
   ]
