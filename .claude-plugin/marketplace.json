@@ -12,15 +12,7 @@
       "name": "vibecoding",
       "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
       "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/generate-roadmap",
-        "./skills/execute-roadmap",
-        "./skills/auto-execute-roadmap",
-        "./skills/archive-roadmap",
-        "./skills/doc-refactor-hook",
-        "./skills/analyze-sessions"
-      ]
+      "strict": false
     }
   ]
 }
