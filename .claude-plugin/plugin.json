@@ -7,30 +7,35 @@
   },
   "userConfig": {
     "parallelAgentLimit": {
+      "title": "Parallel agent limit",
       "description": "Maximum number of phase-executor agents dispatched in parallel per phase. Set lower (e.g. 2) to reduce churn; higher (e.g. 6) when machine and token budget allow.",
       "type": "number",
       "default": 4,
       "sensitive": false
     },
     "defaultEffort": {
+      "title": "Default agent effort",
       "description": "Default reasoning effort for dispatched agents (low | medium | high | xhigh). xhigh requires Opus 4.7 or later.",
       "type": "string",
       "default": "medium",
       "sensitive": false
     },
     "worktreeParentDir": {
+      "title": "Worktree parent directory",
       "description": "Directory under which parallel phase-executor worktrees are created. Relative paths are resolved against the project root.",
       "type": "string",
       "default": "..",
       "sensitive": false
     },
     "autoCommitOnACPass": {
+      "title": "Auto-commit on AC pass",
       "description": "When true, phase-executor commits automatically after AC verification passes. When false, leaves staged changes for user review.",
       "type": "boolean",
       "default": true,
       "sensitive": false
     },
     "runPhaseReviewer": {
+      "title": "Run phase reviewer after integration check",
       "description": "When true, execute-roadmap dispatches the phase-reviewer agent after integration checks pass, before the user checkpoint.",
       "type": "boolean",
       "default": true,
