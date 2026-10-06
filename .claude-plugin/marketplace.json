@@ -5,12 +5,12 @@
   },
   "metadata": {
     "description": "AI-powered roadmap generation and execution skills",
-    "version": "1.1.0"
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "vibecoding",
-      "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
+      "description": "Harness-first roadmap execution: generate dependency-aware roadmaps, build them with parallel agents, and independently validate every task by driving the running app",
       "source": "./",
       "strict": false
     }

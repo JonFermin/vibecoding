@@ -1,7 +1,7 @@
 ---
 name: spike-researcher
 description: Research-only agent for SPIKE tasks in a ROADMAP. Reads existing code and docs within a stated scope, then returns a concise recommendation that the dispatching skill uses to re-scope the task before implementation. Does NOT implement anything — no edit/write tools.
-model: sonnet
+model: claude-sonnet-5-5
 tools: Read, Grep, Glob, WebFetch, Bash
 ---
 

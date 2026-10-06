@@ -1,7 +1,7 @@
 {
   "name": "vibecoding",
-  "version": "1.1.0",
-  "description": "AI-powered project planning and execution — generate dependency-aware roadmaps and execute them phase-by-phase with parallel agents",
+  "version": "2.0.0",
+  "description": "Harness-first roadmap execution: generate dependency-aware roadmaps, build them with parallel agents, and independently validate every task by driving the running app",
   "author": {
     "name": "JonFermin"
   },
@@ -15,7 +15,7 @@
     },
     "defaultEffort": {
       "title": "Default agent effort",
-      "description": "Default reasoning effort for dispatched agents (low | medium | high | xhigh). xhigh requires Opus 4.7 or later.",
+      "description": "Default reasoning effort for dispatched agents (low | medium | high | xhigh). xhigh applies to Opus agents (phase-executor, phase-reviewer).",
       "type": "string",
       "default": "medium",
       "sensitive": false
@@ -29,16 +29,23 @@
     },
     "autoCommitOnACPass": {
       "title": "Auto-commit on AC pass",
-      "description": "When true, phase-executor commits automatically after AC verification passes. When false, leaves staged changes for user review.",
+      "description": "When true, tasks are merged automatically once their AC gate passes and the validator returns PASS. When false, validated branches are left unmerged for review.",
       "type": "boolean",
       "default": true,
       "sensitive": false
     },
     "runPhaseReviewer": {
       "title": "Run phase reviewer after integration check",
-      "description": "When true, execute-roadmap dispatches the phase-reviewer agent after integration checks pass, before the user checkpoint.",
+      "description": "When true, execute-roadmap and auto-execute-roadmap dispatch the phase-reviewer agent after each phase integration check; findings surface at the next milestone checkpoint.",
       "type": "boolean",
       "default": true,
+      "sensitive": false
+    },
+    "validatorBasePort": {
+      "title": "Validator base port",
+      "description": "First port handed to app instances booted by phase-executors and validators. Each concurrent instance gets its own pair (base + 2 x slot, and +1). Pick a range your projects' pinned dev ports don't use.",
+      "type": "number",
+      "default": 4800,
       "sensitive": false
     }
   }
