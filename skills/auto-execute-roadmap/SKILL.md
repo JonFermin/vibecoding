@@ -52,7 +52,7 @@ Dispatch the same named agents as `execute-roadmap` (defined in `${CLAUDE_PLUGIN
 Honor these env vars (set by Claude Code from `plugin.json` `userConfig`), falling back to defaults if unset:
 
 - `CLAUDE_PLUGIN_OPTION_PARALLELAGENTLIMIT` (default `4`) — cap on concurrent phase-executors.
-- `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (default `medium`) — effort passed to dispatched agents. `xhigh` requires an Opus model (`@phase-executor` and `@phase-reviewer` run on Opus 5.5).
+- `CLAUDE_PLUGIN_OPTION_DEFAULTEFFORT` (default `medium`) — effort passed to dispatched agents. `xhigh` requires an Opus model (`@phase-executor` and `@phase-reviewer` run on Opus).
 - `CLAUDE_PLUGIN_OPTION_WORKTREEPARENTDIR` (default `..`) — parent directory for worktrees.
 - `CLAUDE_PLUGIN_OPTION_AUTOCOMMITONACPASS` (default `true`) — when `false`, leaves validated branches unmerged for morning review.
 - `CLAUDE_PLUGIN_OPTION_RUNPHASEREVIEWER` (default `true`) — whether to dispatch `@phase-reviewer` after each phase's integration check.

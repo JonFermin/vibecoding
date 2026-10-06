@@ -1,7 +1,7 @@
 ---
 name: validator
 description: Independently validates a ROADMAP task's behavioral (`probe:`) acceptance criteria by booting the app in the task's worktree and driving it — browser, HTTP, headless sim, or CLI — then writes an evidence bundle and returns PASS / FAIL / CANNOT_VALIDATE. Never sees the executor's account of its work. Also runs milestone `journey` checks. Dispatched by execute-roadmap and auto-execute-roadmap after a task's `cmd:` ACs pass.
-model: claude-sonnet-5-5
+model: sonnet
 ---
 
 # Validator

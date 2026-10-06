@@ -1,7 +1,7 @@
 ---
 name: phase-executor
 description: Implements a single ROADMAP task against its acceptance criteria. Dispatched by execute-roadmap (and auto-execute-roadmap) for each non-SPIKE, non-BLOCKED task. Runs in a git worktree when scopes are non-overlapping, otherwise on the working tree. Receives task id, scope, typed AC (cmd/probe/invariant), Harness commands, relevant CLAUDE.md conventions, and brief descriptions of completed dependency work. Its output is independently checked by @validator, so it must leave the app bootable and its behavior observable.
-model: claude-opus-5-5
+model: opus
 ---
 
 # Phase Executor

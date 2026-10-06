@@ -17,7 +17,7 @@ Dependency-DAG construction is the single highest-leverage step in this skill �
 
 - **Effort level:** On Opus, use `xhigh` effort for Step 4 (Build Phases). On earlier Opus or Sonnet, `high` effort is appropriate. Default `medium` is acceptable only for trivial roadmaps (≤ 5 tasks).
 - **Extended thinking:** Before constructing the DAG, think deeply about task ordering, cross-cutting dependencies, and hidden coupling (shared files, shared state, shared build steps). Surface any assumptions explicitly in the clarifying questions before committing to a phase layout.
-- **1M context (Opus 5.5):** You have room to load the **entire** design doc, every referenced architecture/RFC doc, workspace-level CLAUDE.md, project-level CLAUDE.md, and any existing code directories relevant to already-built features — all in one pass. Do this upfront rather than chunking with `@file` references; holistic reading catches dependencies that narrow passes miss. The practical ceiling is ~500k input tokens before inference slowdown, so still skip vendored dependencies, lockfiles, and binary assets.
+- **1M context (Opus):** You have room to load the **entire** design doc, every referenced architecture/RFC doc, workspace-level CLAUDE.md, project-level CLAUDE.md, and any existing code directories relevant to already-built features — all in one pass. Do this upfront rather than chunking with `@file` references; holistic reading catches dependencies that narrow passes miss. The practical ceiling is ~500k input tokens before inference slowdown, so still skip vendored dependencies, lockfiles, and binary assets.
 
 ## When to Use
 

@@ -1,7 +1,7 @@
 ---
 name: ac-verifier
 description: Mechanical gate for ROADMAP acceptance criteria. Runs `cmd:` and `invariant:` ACs plus the Harness Build, Test, Lint, and Invariants commands against the current working tree or a worktree, and reports pass/fail per command. No edit tools. Does not judge behavior; `probe:` ACs belong to @validator. Used for per-task AC checks and per-phase integration checks.
-model: claude-haiku-4-5-20251001
+model: haiku
 tools: Bash, Read, Grep, Glob
 ---
 

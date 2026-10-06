@@ -1,7 +1,7 @@
 ---
 name: phase-reviewer
 description: Reviews the diff of a completed ROADMAP phase and reports quality issues before the user checkpoint. Runs read-only — no edits. Dispatched by execute-roadmap and auto-execute-roadmap after each phase's integration check passes; at MILESTONE phases its findings are surfaced at the user checkpoint.
-model: claude-opus-5-5
+model: opus
 tools: Read, Grep, Glob, Bash
 ---
 
